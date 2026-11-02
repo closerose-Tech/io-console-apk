@@ -24,6 +24,8 @@ const S = {
   doCount: -1,
   doPorts: -1,
   sheetKey: '',
+  cmdHist: [],
+  cmdHistIdx: -1,
   lastJob: '',
   wasBusy: false,
 };
@@ -101,9 +103,22 @@ function render(st) {
   renderConn(st);
   renderDeploy(st);
   renderIO(st);
+  renderCmdState(st);
   if (S.firstRender) {
     fillForm(st.config || {});
     S.firstRender = false;
+  }
+}
+
+function renderCmdState(st) {
+  const tag = $('#cmdState');
+  if (!tag) return;
+  if (st.connected || st.mode === 'local') {
+    tag.className = 'tag ok';
+    tag.textContent = '已连接';
+  } else {
+    tag.className = 'tag';
+    tag.textContent = '未连接';
   }
 }
 
@@ -146,6 +161,100 @@ function jobName(job) {
     verify: '验证中', reboot: '重启中', devices: '枚举设备', 'io-start': '启动会话',
     'agent': '部署代理', 'agent-remove': '删除代理', selftest: '自检中',
   })[job] || '处理中';
+}
+
+/* ---------------------------------------------------------- 命令交互 */
+const CMD_CHIPS = [
+  'uname -a', 'lspci | grep -i advantech', 'lspci -d 13fe:', 'dmesg | tail -20',
+  'ip a', 'free -m', 'df -h', 'lsmod',
+];
+const CMD_HIST_KEY = 'cmd_history';
+
+function pushCmdHist(cmd) {
+  S.cmdHist = S.cmdHist.filter(c => c !== cmd);
+  S.cmdHist.unshift(cmd);
+  if (S.cmdHist.length > 30) S.cmdHist.length = 30;
+  try { localStorage.setItem(CMD_HIST_KEY, JSON.stringify(S.cmdHist)); } catch (e) { /* 忽略 */ }
+}
+
+function initCmd() {
+  try { S.cmdHist = JSON.parse(localStorage.getItem(CMD_HIST_KEY) || '[]'); }
+  catch (e) { S.cmdHist = []; }
+
+  const chips = $('#cmdChips');
+  CMD_CHIPS.forEach(c => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip-btn';
+    b.textContent = c;
+    b.addEventListener('click', () => { $('#cmdInput').value = c; sendCmd(); });
+    chips.appendChild(b);
+  });
+
+  $('#cmdSend').addEventListener('click', sendCmd);
+  const inp = $('#cmdInput');
+  inp.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); sendCmd(); return; }
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!S.cmdHist.length) return;
+      if (e.key === 'ArrowUp') S.cmdHistIdx = Math.min(S.cmdHistIdx + 1, S.cmdHist.length - 1);
+      else S.cmdHistIdx = Math.max(S.cmdHistIdx - 1, -1);
+      inp.value = S.cmdHistIdx >= 0 ? S.cmdHist[S.cmdHistIdx] : '';
+    }
+  });
+  $('#cmdHist').addEventListener('click', () => {
+    if (!S.cmdHist.length) { toast('还没有历史命令'); return; }
+    S.cmdHistIdx = 0;
+    inp.value = S.cmdHist[0];
+    inp.focus();
+    toast('再按 ↑ 键可翻更早的命令');
+  });
+}
+
+function appendCmd(text, cls) {
+  const out = $('#cmdOut');
+  const div = document.createElement('div');
+  if (cls) div.className = cls;
+  div.textContent = text;
+  out.appendChild(div);
+  out.scrollTop = out.scrollHeight;
+}
+
+function sendCmd() {
+  const inp = $('#cmdInput');
+  const cmd = inp.value.trim();
+  if (!cmd) return;
+  if (!S.state || !S.state.connected) {
+    toast('请先在【连接】页连接目标主机', 'err');
+    return;
+  }
+  pushCmdHist(cmd);
+  S.cmdHistIdx = -1;
+  appendCmd('$ ' + cmd, 'cmd-line');
+  inp.value = '';
+  const busy = document.createElement('div');
+  busy.className = 'cmd-hint';
+  busy.id = 'cmdBusy';
+  busy.textContent = '执行中…';
+  $('#cmdOut').appendChild(busy);
+  $('#cmdOut').scrollTop = $('#cmdOut').scrollHeight;
+
+  api('/api/cmd', { cmd: cmd, timeout: 120 })
+    .then(r => {
+      const b = $('#cmdBusy'); if (b) b.remove();
+      if (r.stdout && r.stdout.trim()) appendCmd(r.stdout.replace(/\n$/, ''), '');
+      if (r.stderr && r.stderr.trim()) appendCmd(r.stderr.replace(/\n$/, ''), 'cmd-err');
+      const e = document.createElement('div');
+      e.className = 'cmd-exit' + (r.exit ? ' bad' : '');
+      e.textContent = '[退出码 ' + r.exit + '] 用时 ' + (r.duration || 0) + 's';
+      $('#cmdOut').appendChild(e);
+      $('#cmdOut').scrollTop = $('#cmdOut').scrollHeight;
+    })
+    .catch(err => {
+      const b = $('#cmdBusy'); if (b) b.remove();
+      appendCmd('执行失败: ' + err.message, 'cmd-err');
+    });
 }
 
 /* ---------------------------------------------------------- 连接页 */
@@ -609,6 +718,9 @@ function bind() {
     b.addEventListener('click', () => { buzz(8); showSub(b.dataset.sub); });
   });
 
+  // ---- 命令交互页
+  initCmd();
+
   // ---- 连接页
   $('#btnEye').addEventListener('click', () => {
     const inp = $('#fPass');
@@ -821,24 +933,6 @@ async function boot() {
   bind();
   showTab('conn');
   showSub('di');
-
-  // APK 模式: 显示控制台服务地址设置
-  if (window.Activation && Activation.isApk()) {
-    const card = $('#apkServerCard');
-    if (card) {
-      card.hidden = false;
-      const fBase = $('#fBase');
-      fBase.value = Activation.base();
-      fBase.addEventListener('change', () => {
-        const v = fBase.value.trim().replace(/\/+$/, '');
-        if (v) {
-          localStorage.setItem('ioconsole_bridge_base', v);
-          toast('服务地址已保存，正在重连…');
-          refresh();
-        }
-      });
-    }
-  }
 
   try {
     const h = await api('/api/log/history');

@@ -193,6 +193,16 @@ node dev/ui_mobile_shot.mjs
   3. 60 秒看门狗: 超时或异常时显示「设备信息 + 各阶段耗时 + 错误堆栈」,
      用户截图即可精确定位卡在哪一步, 不会无限灰屏。
 
+## V2.4.2 署名隐藏 · 后台连接保持
+
+- 「开发者：陈宠」从顶栏移到【日志】页最下方(浅色小字), 激活页与测试报告保留。
+- 后台连接保持: 新增前台保活服务 KeepAliveService(常驻低优先级通知 +
+  PARTIAL_WAKE_LOCK + 高性能 WifiLock, foregroundServiceType=dataSync,
+  stopWithTask=false)。APP 退后台/锁屏/划掉任务后进程与网络不死,
+  配合 SSH 层已有的 30 秒 keepalive, 连接一直保持;
+  只有网络真正断开时状态才会变为「未连接」, 此时手工再点连接即可。
+  (连接状态本就每次实时读取 paramiko transport.is_active(), 无需额外探测。)
+
 ## V2.4.1 修复「未发现设备」
 
 - 现象: 连接成功后点【刷新设备】提示未发现设备, 日志报 FileNotFoundError:

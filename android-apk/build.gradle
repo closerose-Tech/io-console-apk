@@ -1,5 +1,6 @@
 // 根构建脚本: 声明 AGP 与 Chaquopy(内嵌 Python) 版本
+// Chaquopy 17.2.0: 支持 16KB 内存页设备(Android 15+ 新机型), 修复旧版 dlopen 闪退
 plugins {
     id 'com.android.application' version '8.2.2' apply false
-    id 'com.chaquo.python' version '15.0.1' apply false
+    id 'com.chaquo.python' version '17.2.0' apply false
 }

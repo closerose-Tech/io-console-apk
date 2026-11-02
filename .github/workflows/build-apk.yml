@@ -56,12 +56,12 @@ jobs:
       - name: 整理产物
         run: |
           cp android-apk/app/build/outputs/apk/debug/app-debug.apk \
-             "研华IO卡检测控制台_v2.4.1_debug.apk"
-          ls -lh "研华IO卡检测控制台_v2.4.1_debug.apk"
+             "研华IO卡检测控制台_v2.4.2_debug.apk"
+          ls -lh "研华IO卡检测控制台_v2.4.2_debug.apk"
 
       - name: 上传构建产物
         uses: actions/upload-artifact@v4
         with:
           name: io-console-apk
-          path: 研华IO卡检测控制台_v2.4.1_debug.apk
+          path: 研华IO卡检测控制台_v2.4.2_debug.apk
           retention-days: 90

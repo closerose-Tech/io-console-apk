@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>研华I/O卡 检测控制台</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16283c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="IO检测">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<!-- ======================================================= 单位横幅 -->
+<div class="orgbar">中烟信息业保中心</div>
+
+<!-- ======================================================= 图标符号表 -->
+<svg style="display:none" aria-hidden="true">
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M3.9 12a5.1 5.1 0 0 1 5.1-5.1h3v2H9a3.1 3.1 0 1 0 0 6.2h3v2H9A5.1 5.1 0 0 1 3.9 12Zm5.1 1h6v-2H9v2Zm5.1-7.1H17a5.1 5.1 0 1 1 0 10.2h-2.9v-2H17a3.1 3.1 0 1 0 0-6.2h-2.9v-2Z"/></symbol>
+  <symbol id="i-install" viewBox="0 0 24 24"><path d="M12 3a1 1 0 0 1 1 1v9.6l3.3-3.3 1.4 1.4-5.7 5.7-5.7-5.7 1.4-1.4L11 13.6V4a1 1 0 0 1 1-1ZM5 19h14v2H5v-2Z"/></symbol>
+  <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M3 13h3.6l2.2-6.2 3.4 12 2.6-8.3L17 13h4v-2h-3.2l-2.9-1.6-2.6 8.3-3.4-12L6.6 12H3v1Z"/></symbol>
+  <symbol id="i-terminal" viewBox="0 0 24 24"><path d="M4 4h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm1 2v12h14V6H5Zm2.8 2.4 3.2 2.6-3.2 2.6-1.2-1.5L8.5 13l-1.9-1.1 1.2-1.5ZM12 15h5v-1.4h-5V15Z"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M12 5c-5 0-9 4.5-9 7s4 7 9 7 9-4.5 9-7-4-7-9-7Zm0 2c3.4 0 6.4 2.9 7 5-.6 2.1-3.6 5-7 5s-6.4-2.9-7-5c.6-2.1 3.6-5 7-5Zm0 1.8a3.2 3.2 0 1 0 0 6.4 3.2 3.2 0 0 0 0-6.4Z"/></symbol>
+  <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M3.3 2 2 3.3l3.1 3.1C3 8 1.9 9.9 1.9 12c.6 2.5 4.6 7 10.1 7 1.6 0 3.1-.4 4.4-1.1l3.3 3.3 1.3-1.3L3.3 2Zm5 5 2 2c-.2.3-.3.6-.3 1a2 2 0 0 0 2 2c.4 0 .7-.1 1-.3l1.9 1.9c-.9.5-1.9.8-2.9.8-3.4 0-6.4-2.9-7-5 .3-1 1.1-2 2.3-2.9Zm3.7-2c5.5 0 9.5 4.5 10.1 7-.3 1.2-1.1 2.6-2.4 3.8l-1.4-1.4c.9-.8 1.5-1.7 1.8-2.4-.6-2.1-3.6-5-7-5-.6 0-1.2.1-1.7.3L9.7 5.6C10.5 5.2 11.2 5 12 5Z"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7Z"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M9 3h6l1 2h4v2H4V5h4l1-2ZM6 8h12l-1 13H7L6 8Z"/></symbol>
+  <symbol id="i-power" viewBox="0 0 24 24"><path d="M11 3h2v9h-2V3Zm6.4 2 1.4 1.4A8 8 0 1 1 5.2 6.4L6.6 5A10 10 0 1 0 17.4 5Z"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12 19 17.6 17.6 19 12 13.4 6.4 19 5 17.6 10.6 12 5 6.4 6.4 5Z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m9.5 17.6-5.1-5.1 1.4-1.4 3.7 3.7 8.7-8.7 1.4 1.4-10.1 10.1Z"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 3 6.3 8.7l1.4 1.4L11 6.8V16h2V6.8l3.3 3.3 1.4-1.4L12 3ZM5 19h14v2H5v-2Z"/></symbol>
+  <symbol id="i-cmd" viewBox="0 0 24 24"><path d="M4 4h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm1 2v12h14V6H5Zm2.5 2.5 3.5 3.5-3.5 3.5-1.4-1.4L8.2 12 6.1 9.9l1.4-1.4ZM12 15h6v2h-6v-2Z"/></symbol>
+</svg>
+
+<!-- ======================================================= 顶栏 -->
+<header class="appbar">
+  <div class="appbar-inner">
+    <div class="brand">
+      <span class="brand-mark">◤</span>
+      <div class="brand-text">
+        <h1>I/O 卡检测控制台</h1>
+        <p id="subtitle">正在连接服务…</p>
+      </div>
+    </div>
+    <button class="chip" id="connChip" type="button">离线</button>
+  </div>
+  <div class="stripe"></div>
+  <div class="progress" id="progWrap" hidden>
+    <div class="progress-bar" id="progBar"></div>
+    <span class="progress-text" id="progText">就绪</span>
+  </div>
+</header>
+
+<!-- ======================================================= 页面 -->
+<main id="main">
+
+  <!-- ---------------------------------------------- 连接 -->
+  <section class="page" id="page-conn" data-page="conn">
+    <div class="card" id="localNotice" hidden>
+      <div class="card-head">
+        <h2>本机模式</h2>
+        <span class="tag ok">免 SSH</span>
+      </div>
+      <p class="muted">控制台已运行在带 I/O 卡的目标机上，可直接部署驱动与测试点位。</p>
+    </div>
+
+    <div class="card" id="connForm">
+      <div class="card-head"><h2>目标主机</h2></div>
+
+      <label class="field">
+        <span>主机地址 / IP</span>
+        <input id="fHost" type="text" inputmode="url" autocomplete="off"
+               autocapitalize="off" spellcheck="false" placeholder="192.168.1.100">
+      </label>
+
+      <div class="field-row">
+        <label class="field">
+          <span>SSH 端口</span>
+          <input id="fPort" type="text" inputmode="numeric" value="22">
+        </label>
+        <label class="field">
+          <span>登录用户名</span>
+          <input id="fUser" type="text" autocomplete="off" autocapitalize="off"
+                 spellcheck="false" placeholder="root">
+        </label>
+      </div>
+
+      <label class="field">
+        <span>登录密码</span>
+        <span class="input-wrap">
+          <input id="fPass" type="password" autocomplete="current-password" placeholder="安装驱动需 root 或 sudo">
+          <button class="ghost-icon" id="btnEye" type="button" aria-label="显示密码">
+            <svg class="ic"><use href="#i-eye"></use></svg>
+          </button>
+        </span>
+      </label>
+
+      <label class="switch-row">
+        <span>记住密码</span>
+        <input id="fRemember" type="checkbox" class="switch">
+      </label>
+
+      <details class="advanced">
+        <summary>高级设置</summary>
+        <label class="field">
+          <span>SSH 私钥路径（可选）</span>
+          <input id="fKey" type="text" autocapitalize="off" spellcheck="false"
+                 placeholder="/root/.ssh/id_rsa">
+        </label>
+        <label class="field">
+          <span>远端工作目录</span>
+          <input id="fWorkdir" type="text" autocapitalize="off" spellcheck="false"
+                 placeholder="留空 = $HOME/advdaq_install">
+        </label>
+      </details>
+
+      <div class="btn-row">
+        <button class="btn filled grow" id="btnConnect">
+          <svg class="ic"><use href="#i-link"></use></svg>连接
+        </button>
+        <button class="btn outlined" id="btnDisconnect">断开</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>连接状态</h2></div>
+      <dl class="kv">
+        <dt>状态</dt><dd id="kvState">未连接</dd>
+        <dt>系统</dt><dd id="kvSys">—</dd>
+        <dt>权限</dt><dd id="kvSudo">—</dd>
+        <dt>模式</dt><dd id="kvMode">远程 SSH</dd>
+      </dl>
+    </div>
+
+    <details class="card tips">
+      <summary>使用前置条件</summary>
+      <ol>
+        <li>目标 Linux 已开启 sshd，账号可密码或密钥登录；</li>
+        <li>安装驱动需 root 权限：以 root 登录，或该账号具备 sudo 能力；</li>
+        <li>研华 PCI-1762 / PCI-1761 已插在目标机 PCI 插槽上；</li>
+        <li>目标机可访问软件源，用于自动安装内核头文件与 gcc。</li>
+      </ol>
+    </details>
+  </section>
+
+  <!-- ---------------------------------------------- 驱动 -->
+  <section class="page" id="page-deploy" data-page="deploy" hidden>
+    <div class="card">
+      <div class="card-head"><h2>I/O 卡型号</h2></div>
+      <div class="segmented" id="modelSeg">
+        <button data-model="PCI-1762" class="on">PCI-1762<small>16DI + 16继电器</small></button>
+        <button data-model="PCI-1761">PCI-1761<small>8DI + 8继电器</small></button>
+        <button data-model="both">两块都装<small>1762 + 1761</small></button>
+      </div>
+      <p class="hint" id="modelHint"></p>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>驱动安装包</h2>
+        <span class="tag" id="instTag">未选择</span>
+      </div>
+      <div class="installer-list" id="instList"></div>
+      <button class="btn tonal block" id="btnUpload">
+        <svg class="ic"><use href="#i-upload"></use></svg>从手机上传 .run 安装包
+      </button>
+      <input type="file" id="fileInput" accept=".run" hidden>
+      <div class="upload-progress" id="upWrap" hidden><div id="upBar"></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>部署选项</h2></div>
+      <label class="switch-row"><span>自动安装编译依赖<small>gcc / make / 内核头文件</small></span>
+        <input id="optDeps" type="checkbox" class="switch" checked></label>
+      <label class="switch-row"><span>先更新软件源<small>apt-get update / dnf makecache</small></span>
+        <input id="optSrc" type="checkbox" class="switch" checked></label>
+      <label class="switch-row"><span>屏蔽冲突驱动<small>comedi / adv_pci_dio / adv_pci1710</small></span>
+        <input id="optBlack" type="checkbox" class="switch" checked></label>
+      <label class="switch-row"><span>装完自动重启<small>驱动重启后才会加载</small></span>
+        <input id="optReboot" type="checkbox" class="switch" checked></label>
+    </div>
+
+    <button class="btn filled block big" id="btnDeploy">一键安装驱动</button>
+
+    <div class="card">
+      <div class="card-head"><h2>维护操作</h2></div>
+      <div class="btn-grid">
+        <button class="btn outlined" id="btnProbe">仅检测环境</button>
+        <button class="btn outlined" id="btnVerify">验证安装结果</button>
+        <button class="btn outlined" id="btnReboot">重启目标机</button>
+        <button class="btn danger" id="btnUninstall">
+          <svg class="ic"><use href="#i-trash"></use></svg>卸载驱动
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>远程测试代理</h2></div>
+      <p class="muted">测试页需要目标机上的 bio1762_io 代理，首次启动会话时会自动部署。</p>
+      <div class="btn-grid two">
+        <button class="btn outlined" id="btnAgent">部署代理</button>
+        <button class="btn outlined" id="btnAgentDel">删除代理</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------- 测试 -->
+  <section class="page" id="page-io" data-page="io" hidden>
+    <div class="card io-head">
+      <div class="row-between">
+        <div>
+          <h2 id="devTitle">未启动会话</h2>
+          <p class="muted" id="devSub">请先刷新并选择设备</p>
+        </div>
+        <span class="tag" id="ioTag">空闲</span>
+      </div>
+      <div class="device-chips" id="devChips"></div>
+      <div class="btn-row">
+        <button class="btn tonal grow" id="btnRefresh">
+          <svg class="ic"><use href="#i-refresh"></use></svg>刷新设备
+        </button>
+        <button class="btn filled grow" id="btnIoStart">启动会话</button>
+        <button class="btn outlined" id="btnIoStop">结束</button>
+      </div>
+    </div>
+
+    <div class="segmented wrap" id="ioSeg">
+      <button data-sub="di" class="on">DI 输入</button>
+      <button data-sub="do">DO 输出</button>
+      <button data-sub="test">自检</button>
+    </div>
+
+    <!-- DI -->
+    <div class="subpane" id="sub-di">
+      <div class="card">
+        <div class="card-head">
+          <h2>数字量输入</h2>
+          <span class="mono" id="diHex">--</span>
+        </div>
+        <div class="grid di-grid" id="diGrid"></div>
+        <p class="hint">点任意点位可设置备注名（如 DI1 = 原料入口检测）。</p>
+        <div class="btn-row">
+          <button class="btn tonal grow" id="btnWatch">开始实时监视</button>
+          <button class="btn outlined" id="btnReadDi">读取一次</button>
+        </div>
+        <label class="field inline">
+          <span>轮询间隔</span>
+          <input id="fInterval" type="range" min="50" max="1000" step="50" value="200">
+          <b class="mono" id="intervalVal">200ms</b>
+        </label>
+      </div>
+    </div>
+
+    <!-- DO -->
+    <div class="subpane" id="sub-do" hidden>
+      <div class="card">
+        <div class="card-head">
+          <h2>继电器输出</h2>
+          <span class="mono" id="doHex">--</span>
+        </div>
+        <div class="grid do-grid" id="doGrid"></div>
+        <p class="hint">点按切换吸合/释放，长按设置备注名。数值为回读的真实触点状态。</p>
+        <div class="btn-grid two">
+          <button class="btn tonal" id="btnAllOn">全部吸合</button>
+          <button class="btn tonal" id="btnAllOff">全部释放</button>
+          <button class="btn outlined" id="btnInvert">状态反相</button>
+          <button class="btn outlined" id="btnReadDo">读取回读</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>按字节写入</h2></div>
+        <div class="byte-row" id="byteRow"></div>
+        <button class="btn outlined block" id="btnWriteBytes">写入</button>
+      </div>
+    </div>
+
+    <!-- 自检 -->
+    <div class="subpane" id="sub-test" hidden>
+      <div class="card">
+        <div class="card-head"><h2>功能自检</h2></div>
+        <label class="switch-row"><span>包含逐位继电器测试<small>每路单独置 1 再置 0 并回读</small></span>
+          <input id="optPerBit" type="checkbox" class="switch" checked></label>
+        <button class="btn filled block" id="btnSelftest">开始自检</button>
+        <div class="result" id="selfResult" hidden>
+          <div class="result-head" id="selfHead"></div>
+          <ul class="result-list" id="selfList"></ul>
+          <a class="btn tonal block" id="btnExport" href="/api/report" download>导出测试报告</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------- 命令交互 -->
+  <section class="page" id="page-cmd" data-page="cmd" hidden>
+    <div class="card">
+      <div class="card-head">
+        <h2>命令交互</h2>
+        <span class="tag" id="cmdState">未连接</span>
+      </div>
+      <p class="muted">在目标主机上手工执行命令并查看输出反馈。请谨慎执行危险命令。</p>
+      <div class="cmd-chips" id="cmdChips"></div>
+      <div class="console cmd-out" id="cmdOut"><div class="cmd-hint">连接目标主机后，在这里输入命令并查看运行结果。</div></div>
+      <div class="cmd-input-row">
+        <button class="cmd-hist" id="cmdHist" type="button" title="历史命令">＃</button>
+        <input id="cmdInput" type="text" autocomplete="off" autocapitalize="off"
+               spellcheck="false" placeholder="输入命令，如 uname -a">
+        <button class="btn filled" id="cmdSend" type="button">发送</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------- 日志 -->
+  <section class="page" id="page-log" data-page="log" hidden>
+    <div class="log-toolbar">
+      <span class="mono" id="logCount">0 行</span>
+      <div class="row-gap">
+        <button class="btn text" id="btnAutoscroll">自动滚动: 开</button>
+        <button class="btn text" id="btnClearLog">清空</button>
+      </div>
+    </div>
+    <div class="console" id="logList"></div>
+  </section>
+</main>
+
+<!-- ======================================================= 底部导航 -->
+<nav class="bottomnav" id="bottomNav">
+  <button data-tab="conn" class="on">
+    <svg class="ic"><use href="#i-link"></use></svg><span>连接</span>
+  </button>
+  <button data-tab="deploy">
+    <svg class="ic"><use href="#i-install"></use></svg><span>驱动</span>
+  </button>
+  <button data-tab="io">
+    <svg class="ic"><use href="#i-pulse"></use></svg><span>测试</span>
+  </button>
+  <button data-tab="cmd">
+    <svg class="ic"><use href="#i-cmd"></use></svg><span>命令</span>
+  </button>
+  <button data-tab="log">
+    <svg class="ic"><use href="#i-terminal"></use></svg><span>日志</span>
+  </button>
+</nav>
+
+<!-- ======================================================= 底部弹出层 -->
+<div class="scrim" id="scrim" hidden></div>
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true">
+  <div class="sheet-handle"></div>
+  <h3 id="sheetTitle">点位备注</h3>
+  <p class="muted" id="sheetSub"></p>
+  <input id="sheetInput" type="text" maxlength="24" placeholder="例如：引风机">
+  <div class="sheet-actions">
+    <button class="btn text" id="sheetClear">清除</button>
+    <button class="btn text" id="sheetCancel">取消</button>
+    <button class="btn filled" id="sheetSave">保存</button>
+  </div>
+</div>
+
+<div class="snackbar" id="snack"></div>
+
+<script src="activate.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

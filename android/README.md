@@ -193,6 +193,16 @@ node dev/ui_mobile_shot.mjs
   3. 60 秒看门狗: 超时或异常时显示「设备信息 + 各阶段耗时 + 错误堆栈」,
      用户截图即可精确定位卡在哪一步, 不会无限灰屏。
 
+## V2.4.1 修复「未发现设备」
+
+- 现象: 连接成功后点【刷新设备】提示未发现设备, 日志报 FileNotFoundError:
+  `.../chaquopy/AssetFinder/app/remote_src/bio1762_io.c`。
+- 根因: sync_apk_assets.py 只复制了 `daq_remote/*.py`, 漏了远程测试代理源码
+  `remote_src/`(bio1762_io.c + Makefile)。枚举设备/启动会话需先把它上传到
+  目标机编译, 包里没有该文件即异常。
+- 修复: 同步脚本改为把 `remote_src/` 一并打进 APK(位于 python 源集根目录,
+  Chaquopy 会解压到 AssetFinder/app, 与 assets.py 的定位路径一致)。
+
 ## V2.4.0 刷新设备修复 · 命令页增强 · 内置驱动
 
 - 修复【测试】页点【刷新设备】必报「无法连接控制台服务」的问题:

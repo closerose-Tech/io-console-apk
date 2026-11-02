@@ -16,6 +16,9 @@
 </head>
 <body>
 
+<!-- ======================================================= 单位横幅 -->
+<div class="orgbar">中烟信息业保中心</div>
+
 <!-- ======================================================= 图标符号表 -->
 <svg style="display:none" aria-hidden="true">
   <symbol id="i-link" viewBox="0 0 24 24"><path d="M3.9 12a5.1 5.1 0 0 1 5.1-5.1h3v2H9a3.1 3.1 0 1 0 0 6.2h3v2H9A5.1 5.1 0 0 1 3.9 12Zm5.1 1h6v-2H9v2Zm5.1-7.1H17a5.1 5.1 0 1 1 0 10.2h-2.9v-2H17a3.1 3.1 0 1 0 0-6.2h-2.9v-2Z"/></symbol>
@@ -30,6 +33,7 @@
   <symbol id="i-close" viewBox="0 0 24 24"><path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12 19 17.6 17.6 19 12 13.4 6.4 19 5 17.6 10.6 12 5 6.4 6.4 5Z"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="m9.5 17.6-5.1-5.1 1.4-1.4 3.7 3.7 8.7-8.7 1.4 1.4-10.1 10.1Z"/></symbol>
   <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 3 6.3 8.7l1.4 1.4L11 6.8V16h2V6.8l3.3 3.3 1.4-1.4L12 3ZM5 19h14v2H5v-2Z"/></symbol>
+  <symbol id="i-cmd" viewBox="0 0 24 24"><path d="M4 4h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm1 2v12h14V6H5Zm2.5 2.5 3.5 3.5-3.5 3.5-1.4-1.4L8.2 12 6.1 9.9l1.4-1.4ZM12 15h6v2h-6v-2Z"/></symbol>
 </svg>
 
 <!-- ======================================================= 顶栏 -->
@@ -62,18 +66,6 @@
         <span class="tag ok">免 SSH</span>
       </div>
       <p class="muted">控制台已运行在带 I/O 卡的目标机上，可直接部署驱动与测试点位。</p>
-    </div>
-
-    <div class="card" id="apkServerCard" hidden>
-      <div class="card-head">
-        <h2>控制台服务</h2>
-        <span class="tag">APP 模式</span>
-      </div>
-      <label class="field">
-        <span>服务地址（桥接服务所在机器 IP:端口）</span>
-        <input id="fBase" type="url" inputmode="url" autocomplete="off"
-               autocapitalize="off" spellcheck="false" placeholder="http://192.168.1.100:8080">
-      </label>
     </div>
 
     <div class="card" id="connForm">
@@ -303,6 +295,25 @@
     </div>
   </section>
 
+  <!-- ---------------------------------------------- 命令交互 -->
+  <section class="page" id="page-cmd" data-page="cmd" hidden>
+    <div class="card">
+      <div class="card-head">
+        <h2>命令交互</h2>
+        <span class="tag" id="cmdState">未连接</span>
+      </div>
+      <p class="muted">在目标主机上手工执行命令并查看输出反馈。请谨慎执行危险命令。</p>
+      <div class="cmd-chips" id="cmdChips"></div>
+      <div class="console cmd-out" id="cmdOut"><div class="cmd-hint">连接目标主机后，在这里输入命令并查看运行结果。</div></div>
+      <div class="cmd-input-row">
+        <button class="cmd-hist" id="cmdHist" type="button" title="历史命令">＃</button>
+        <input id="cmdInput" type="text" autocomplete="off" autocapitalize="off"
+               spellcheck="false" placeholder="输入命令，如 uname -a">
+        <button class="btn filled" id="cmdSend" type="button">发送</button>
+      </div>
+    </div>
+  </section>
+
   <!-- ---------------------------------------------- 日志 -->
   <section class="page" id="page-log" data-page="log" hidden>
     <div class="log-toolbar">
@@ -326,6 +337,9 @@
   </button>
   <button data-tab="io">
     <svg class="ic"><use href="#i-pulse"></use></svg><span>测试</span>
+  </button>
+  <button data-tab="cmd">
+    <svg class="ic"><use href="#i-cmd"></use></svg><span>命令</span>
   </button>
   <button data-tab="log">
     <svg class="ic"><use href="#i-terminal"></use></svg><span>日志</span>

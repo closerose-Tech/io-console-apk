@@ -81,7 +81,7 @@ public class MainActivity extends Activity {
     /** 后台完成: 资产解压 → Python 启动 → 本地服务就绪 → 加载界面 */
     private void startInBackground() {
         final Context app = getApplicationContext();
-        final Activity act = this;
+        final MainActivity act = this;
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -107,7 +107,7 @@ public class MainActivity extends Activity {
     }
 
     /** 启动失败: 页面显示错误摘要(不闪退), 便于用户拍照反馈 */
-    private static void showError(final Activity act, Throwable t) {
+    private static void showError(final MainActivity act, Throwable t) {
         StringWriter sw = new StringWriter();
         t.printStackTrace(new PrintWriter(sw));
         String trace = sw.toString().replace("&", "&amp;").replace("<", "&lt;")

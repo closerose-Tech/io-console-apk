@@ -854,6 +854,11 @@ input.switch:active::after { width: 30px; }
   font-size: .8rem; font-family: Consolas, Menlo, monospace;
 }
 .chip-btn:active { background: var(--primary-soft); }
+.cmd-toolbar {
+  display: flex; justify-content: flex-end; gap: 2px;
+  margin: 2px 0 6px;
+}
+.cmd-toolbar .btn { min-height: 36px; padding: 0 10px; font-size: .82rem; }
 .cmd-out {
   min-height: 300px; max-height: 46vh; overflow-y: auto;
   font-family: Consolas, Menlo, monospace; font-size: .82rem; line-height: 1.55;

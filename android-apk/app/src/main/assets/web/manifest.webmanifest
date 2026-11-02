@@ -1,0 +1,19 @@
+{
+  "name": "研华I/O卡 检测控制台",
+  "short_name": "IO检测",
+  "description": "中烟信息业保中心 研华 PCI-1762 / PCI-1761 驱动安装与远程 I/O 测试控制台",
+  "lang": "zh-CN",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#eceff3",
+  "theme_color": "#16283c",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

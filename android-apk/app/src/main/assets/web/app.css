@@ -854,6 +854,15 @@ input.switch:active::after { width: 30px; }
   font-size: .8rem; font-family: Consolas, Menlo, monospace;
 }
 .chip-btn:active { background: var(--primary-soft); }
+.credit {
+  text-align: center;
+  font-size: .72rem;
+  color: var(--muted);
+  opacity: .6;
+  margin: 10px 0 20px;
+  user-select: none;
+}
+
 .cmd-toolbar {
   display: flex; justify-content: flex-end; gap: 2px;
   margin: 2px 0 6px;

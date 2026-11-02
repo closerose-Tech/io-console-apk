@@ -141,7 +141,6 @@ function renderHeader(st) {
   const parts = [];
   parts.push(st.mode === 'local' ? '本机直连' : (st.config.host || '未设置主机'));
   parts.push('v' + st.version);
-  parts.push('开发者：陈宠');
   $('#subtitle').textContent = parts.join(' · ');
 
   const wrap = $('#progWrap');

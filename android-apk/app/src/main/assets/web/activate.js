@@ -135,7 +135,7 @@ const Activation = (function () {
   }
 
   /* ------------------------------------------------ 激活页 UI */
-  const APP_VER = 'v2.3.3';
+  const APP_VER = 'v2.4.0';
   let resolver = null;
 
   function buildGate() {
@@ -164,7 +164,7 @@ const Activation = (function () {
         </div>
         <p class="gate-err" id="gateErr" hidden>校验码不正确，请核对机器码后重试</p>
         <button type="button" class="gate-btn" id="gateGo">激活</button>
-        <p class="gate-foot">${APP_VER} · 设计开发人：陈宠</p>
+        <p class="gate-foot">${APP_VER} · 开发者：陈宠</p>
       </div>`;
     document.body.appendChild(gate);
 

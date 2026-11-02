@@ -138,6 +138,11 @@ public class MainActivity extends Activity {
                     File webDir = extractWebAssets(app);
                     stage("✓ 界面资产就绪 (" + secs() + ")");
 
+                    // 1.5 内置驱动安装包 (assets/driver/*.run → filesDir/uploads)
+                    stage("▸ 准备内置驱动安装包…");
+                    extractBuiltinDriver(app);
+                    stage("✓ 内置驱动就绪 (" + secs() + ")");
+
                     // 2. Python 引擎初始化(首次运行要解压标准库, 较慢)
                     stage("▸ 初始化 Python 引擎(首次运行约 10~60 秒)…");
                     if (!Python.isStarted()) {
@@ -278,6 +283,55 @@ public class MainActivity extends Activity {
         if (names.isEmpty()) throw new IOException("资产清单 filelist.txt 为空");
         for (String name : names) {
             copyFile(am, "web/" + name, new File(outDir, name));
+        }
+    }
+
+    /**
+     * 解压 assets/driver/ 下的内置驱动安装包到 filesDir/uploads/,
+     * 桥接服务的 list_installers() 会自动扫描该目录, 驱动页即可直接选用。
+     * 清单格式(filelist.txt, 由 sync_apk_assets.py 生成): "文件名 大小",
+     * 已存在且大小一致时跳过, 避免每次启动重复复制 20 多 MB。
+     */
+    private static void extractBuiltinDriver(Context ctx) {
+        AssetManager am = ctx.getAssets();
+        File upDir = new File(ctx.getFilesDir(), "uploads");
+        if (!upDir.exists() && !upDir.mkdirs()) {
+            throw new RuntimeException("无法创建 uploads 目录");
+        }
+        java.util.List<String[]> entries = new java.util.ArrayList<>();
+        java.io.BufferedReader reader = null;
+        try {
+            reader = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(am.open("driver/filelist.txt"), "UTF-8"));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty() || line.startsWith("#")) continue;
+                String[] parts = line.split("\\s+");
+                if (parts.length >= 1) {
+                    entries.add(new String[]{parts[0],
+                            parts.length > 1 ? parts[1] : "0"});
+                }
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("内置驱动清单读取失败", e);
+        } finally {
+            if (reader != null) try { reader.close(); } catch (IOException ignored) { }
+        }
+        try {
+            for (String[] entry : entries) {
+                File dst = new File(upDir, entry[0]);
+                long expect = 0;
+                try { expect = Long.parseLong(entry[1]); } catch (NumberFormatException ignored) { }
+                if (dst.isFile() && dst.length() == expect && expect > 0) continue;
+                copyFile(am, "driver/" + entry[0], dst);
+                if (expect > 0 && dst.length() != expect) {
+                    throw new IOException("内置驱动解压不完整: " + entry[0]
+                            + " 期望 " + expect + " 实际 " + dst.length());
+                }
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("内置驱动解压失败", e);
         }
     }
 

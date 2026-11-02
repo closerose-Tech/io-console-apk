@@ -2,6 +2,7 @@ package com.aic.ioconsole;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.AssetManager;
@@ -10,6 +11,8 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.view.KeyEvent;
 import android.webkit.JavascriptInterface;
+import android.webkit.JsResult;
+import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.widget.Toast;
@@ -60,6 +63,33 @@ public class MainActivity extends Activity {
         st.setDatabaseEnabled(true);
         web.setBackgroundColor(0xFFECEFF3);
         web.addJavascriptInterface(new Bridge(), "AndroidBridge");
+        // JS 的 alert/confirm 必须有 WebChromeClient 才会弹窗;
+        // 没有它 confirm() 被静默吞掉返回"取消", 导致全部吸合/自检/安装等按钮无效
+        web.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onJsAlert(WebView view, String url, String message,
+                                     final JsResult result) {
+                new AlertDialog.Builder(MainActivity.this)
+                        .setMessage(message)
+                        .setPositiveButton("确定", (d, w) -> result.confirm())
+                        .setOnCancelListener(d -> result.cancel())
+                        .show();
+                return true;
+            }
+
+            @Override
+            public boolean onJsConfirm(WebView view, String url, String message,
+                                       final JsResult result) {
+                new AlertDialog.Builder(MainActivity.this)
+                        .setTitle("请确认")
+                        .setMessage(message)
+                        .setPositiveButton("确定", (d, w) -> result.confirm())
+                        .setNegativeButton("取消", (d, w) -> result.cancel())
+                        .setOnCancelListener(d -> result.cancel())
+                        .show();
+                return true;
+            }
+        });
         setContentView(web);
 
         // 前台保活: 退后台/锁屏时保持进程与网络存活, SSH 连接不掉

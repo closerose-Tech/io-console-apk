@@ -243,34 +243,41 @@ public class MainActivity extends Activity {
 
     /* ------------------------------------------------------------ 资产解压 */
 
-    /** 解压 assets/web/** 到 filesDir/web, 返回目标目录 */
+    /** 解压 assets/web/* 到 filesDir/web, 返回目标目录 */
     private static File extractWebAssets(Context ctx) {
         File outDir = new File(ctx.getFilesDir(), "web");
         AssetManager am = ctx.getAssets();
         try {
-            copyAssetsDir(am, "web", outDir);
+            copyFromManifest(am, outDir);
         } catch (IOException e) {
             throw new RuntimeException("界面资产解压失败", e);
         }
         return outDir;
     }
 
-    private static void copyAssetsDir(AssetManager am, String assetPath, File outDir)
+    /**
+     * 按清单文件(web/.filelist, 由 sync_apk_assets.py 生成)逐个复制。
+     * 不用 AssetManager.list(): 在部分新系统(如 Android 17)上对 assets
+     * 目录返回空, 会导致把目录当文件打开报 EISDIR。
+     */
+    private static void copyFromManifest(AssetManager am, File outDir)
             throws IOException {
         outDir.mkdirs();
-        String[] names = am.list(assetPath);
-        if (names == null || names.length == 0) {
-            copyFile(am, assetPath, outDir);
-            return;
-        }
-        for (String name : names) {
-            String child = assetPath + "/" + name;
-            String[] sub = am.list(child);
-            if (sub != null && sub.length > 0) {
-                copyAssetsDir(am, child, new File(outDir, name));
-            } else {
-                copyFile(am, child, outDir);
+        java.util.List<String> names = new java.util.ArrayList<>();
+        java.io.BufferedReader reader = new java.io.BufferedReader(
+                new java.io.InputStreamReader(am.open("web/.filelist"), "UTF-8"));
+        try {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (!line.isEmpty() && !line.startsWith("#")) names.add(line);
             }
+        } finally {
+            try { reader.close(); } catch (IOException ignored) { }
+        }
+        if (names.isEmpty()) throw new IOException("资产清单 .filelist 为空");
+        for (String name : names) {
+            copyFile(am, "web/" + name, new File(outDir, name));
         }
     }
 

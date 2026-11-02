@@ -165,6 +165,7 @@
         <span class="tag" id="instTag">未选择</span>
       </div>
       <div class="installer-list" id="instList"></div>
+      <p class="hint">APP 已内置驱动安装包（DAQ_Linux_20260306_64bit，覆盖 PCI-1762 / PCI-1761），连接目标机后无需上传即可一键安装；也可从手机上传其他版本的 .run 安装包。</p>
       <button class="btn tonal block" id="btnUpload">
         <svg class="ic"><use href="#i-upload"></use></svg>从手机上传 .run 安装包
       </button>
@@ -304,6 +305,10 @@
       </div>
       <p class="muted">在目标主机上手工执行命令并查看输出反馈。请谨慎执行危险命令。</p>
       <div class="cmd-chips" id="cmdChips"></div>
+      <div class="cmd-toolbar">
+        <button class="btn text" id="cmdCopy" type="button">复制内容</button>
+        <button class="btn text" id="cmdClear" type="button">清空窗口</button>
+      </div>
       <div class="console cmd-out" id="cmdOut"><div class="cmd-hint">连接目标主机后，在这里输入命令并查看运行结果。</div></div>
       <div class="cmd-input-row">
         <button class="cmd-hist" id="cmdHist" type="button" title="历史命令">＃</button>

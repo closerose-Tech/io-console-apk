@@ -3,6 +3,12 @@
 
     <!-- 控制台通过 http 访问目标机桥接服务, 需允许明文流量 -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 前台保活: APP 退后台/锁屏时保持 SSH 连接不断 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <application
         android:label="@string/app_name"
         android:icon="@drawable/ic_launcher"
@@ -20,5 +26,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- 从最近任务划掉 APP 后服务继续运行, 回来时连接仍在 -->
+        <service
+            android:name=".KeepAliveService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"
+            android:stopWithTask="false" />
     </application>
 </manifest>

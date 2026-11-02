@@ -11,8 +11,8 @@ android {
         applicationId 'com.aic.ioconsole'
         minSdk 24
         targetSdk 34
-        versionCode 6
-        versionName '2.4.0'
+        versionCode 7
+        versionName '2.4.1'
 
         // Chaquopy 必需: 指定包含 Python 运行库的 ABI
         // 仅保留 arm64: 32 位不支持 16KB 页对齐, 且 2025 年后机型均为 64 位

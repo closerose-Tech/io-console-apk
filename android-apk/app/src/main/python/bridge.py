@@ -810,7 +810,7 @@ class Console:
                                          time.localtime(self.report_time or time.time())),
             "运行模式: %s" % ("本机(目标机内)" if self.mode == "local" else "远程 SSH"),
             "设备信息: %s" % (self.device.desc if self.device else "未知"),
-            "工具版本: %s · 设计开发人：陈宠" % __version__,
+            "工具版本: %s · 开发者：陈宠" % __version__,
             "-" * 60,
         ]
         return "\n".join(head + (self.report or ["(尚未运行自检)"])) + "\n"
@@ -1183,7 +1183,7 @@ def main() -> int:
     args = ap.parse_args()
 
     if args.version:
-        print("%s v%s · 设计开发人：陈宠" % (APP_TITLE, __version__))
+        print("%s v%s · 开发者：陈宠" % (APP_TITLE, __version__))
         return 0
 
     console = Console(mode="local" if args.local else "ssh", data_dir=args.data_dir)
@@ -1194,7 +1194,7 @@ def main() -> int:
 
     mode_txt = "本机模式 (直接操作本机 I/O 卡)" if args.local else "远程模式 (SSH 连接目标机)"
     print("=" * 62)
-    print("  %s  v%s · 设计开发人：陈宠" % (APP_TITLE, __version__))
+    print("  %s  v%s · 开发者：陈宠" % (APP_TITLE, __version__))
     print("  运行方式 : %s" % mode_txt)
     print("  监听     : %s:%d" % (args.host, args.port))
     ips = local_ips()

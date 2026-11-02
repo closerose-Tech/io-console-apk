@@ -5,6 +5,8 @@ on:
   push:
     tags:
       - 'v*'              # 推送 v* 标签时自动构建
+    branches:
+      - main
 
 jobs:
   build-apk:
@@ -20,8 +22,22 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: 安装 Android SDK 命令行工具
-        uses: android-actions/setup-android@v3
+      # 手动安装 Android cmdline-tools (比 action 更可控, 失败可重试)
+      - name: 安装 Android SDK
+        run: |
+          set -e
+          BASE=$HOME/android-sdk
+          mkdir -p "$BASE/cmdline-tools"
+          for i in 1 2 3; do
+            wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip \
+              -O /tmp/tools.zip && break
+            echo "下载重试 $i"; sleep 10
+          done
+          unzip -q /tmp/tools.zip -d "$BASE/cmdline-tools"
+          mv "$BASE/cmdline-tools/cmdline-tools" "$BASE/cmdline-tools/latest"
+          echo "ANDROID_HOME=$BASE" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$BASE" >> "$GITHUB_ENV"
+          yes | "$BASE/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
 
       - name: 安装 Gradle 8.7
         uses: gradle/actions/setup-gradle@v3

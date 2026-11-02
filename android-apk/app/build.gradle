@@ -1,0 +1,33 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.aic.ioconsole'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.aic.ioconsole'
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName '2.2.0'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    // WebViewAssetLoader: 以 https 域名加载本地资产页,
+    // 使页面内 fetch / EventSource 等相对路径请求拥有正常 origin
+    implementation 'androidx.webkit:webkit:1.8.0'
+}

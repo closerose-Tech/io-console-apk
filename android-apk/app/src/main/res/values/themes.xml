@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 使用框架主题, 避免引入 AppCompat 依赖 -->
+    <style name="AppTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#16283C</item>
+        <item name="android:windowBackground">#ECEFF3</item>
+    </style>
+</resources>

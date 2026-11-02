@@ -135,7 +135,7 @@ const Activation = (function () {
   }
 
   /* ------------------------------------------------ 激活页 UI */
-  const APP_VER = 'v2.4.2';
+  const APP_VER = 'v2.4.3';
   let resolver = null;
 
   function buildGate() {

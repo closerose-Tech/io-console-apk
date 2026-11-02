@@ -61,6 +61,9 @@ public class MainActivity extends Activity {
         web.addJavascriptInterface(new Bridge(), "AndroidBridge");
         setContentView(web);
 
+        // 前台保活: 退后台/锁屏时保持进程与网络存活, SSH 连接不掉
+        startKeepAlive();
+
         if (savedInstanceState != null) {
             web.restoreState(savedInstanceState);
             return;
@@ -68,6 +71,26 @@ public class MainActivity extends Activity {
         showSplash();
         t0 = System.currentTimeMillis();
         startInBackground();
+    }
+
+    /* ------------------------------------------------------------ 连接保活 */
+
+    /** 启动前台保活服务(常驻通知 + CPU/Wi-Fi 锁)。失败不影响主流程。 */
+    private void startKeepAlive() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            try {
+                requestPermissions(new String[]{
+                        android.Manifest.permission.POST_NOTIFICATIONS}, 1);
+            } catch (Exception ignored) { }
+        }
+        try {
+            Intent it = new Intent(this, KeepAliveService.class);
+            if (Build.VERSION.SDK_INT >= 26) {
+                startForegroundService(it);
+            } else {
+                startService(it);
+            }
+        } catch (Exception ignored) { }
     }
 
     /* ------------------------------------------------------------ 启动进度页 */

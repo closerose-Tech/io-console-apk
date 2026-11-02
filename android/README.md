@@ -193,6 +193,16 @@ node dev/ui_mobile_shot.mjs
   3. 60 秒看门狗: 超时或异常时显示「设备信息 + 各阶段耗时 + 错误堆栈」,
      用户截图即可精确定位卡在哪一步, 不会无限灰屏。
 
+## V2.4.3 修复「全部吸合/自检无效」
+
+- 现象: 测试页点【全部吸合】【开始自检】(以及驱动页【一键安装驱动】【卸载驱动】
+  【重启目标机】)毫无反应。
+- 根因: 这些按钮在执行前调用 JS 的 `confirm()` 弹确认框, 而 WebView 默认没有
+  WebChromeClient, `confirm()` 会被静默吞掉直接返回"取消", 函数提前 return。
+  桌面浏览器/PWA 正常, 只有 APK 壳存在此问题。
+- 修复: MainActivity 给 WebView 设置 WebChromeClient, 用原生 AlertDialog
+  实现 onJsAlert / onJsConfirm(确定=confirm, 取消=cancel)。
+
 ## V2.4.2 署名隐藏 · 后台连接保持
 
 - 「开发者：陈宠」从顶栏移到【日志】页最下方(浅色小字), 激活页与测试报告保留。

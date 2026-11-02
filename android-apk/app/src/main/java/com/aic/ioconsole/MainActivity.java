@@ -123,7 +123,7 @@ public class MainActivity extends Activity {
         act.runOnUiThread(() -> act.webLoadData(html));
     }
 
-    private void webLoadData(String html) {
+    public void webLoadData(String html) {
         if (web != null) web.loadData(html, "text/html", "utf-8");
     }
 

@@ -20,6 +20,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
@@ -33,6 +35,9 @@ import java.net.URL;
  * JS 桥 AndroidBridge 提供:
  *   machineCode(): 设备机器码(ANDROID_ID), 供激活页计算校验码
  *   toast(msg):    原生提示
+ *
+ * v2.3.1: 启动流程全部放入后台线程; 任何启动异常都在页面显示完整错误,
+ *         不再直接闪退(便于现场反馈问题)。
  */
 public class MainActivity extends Activity {
 
@@ -45,18 +50,6 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // 1. 把打包在 assets/web 的界面文件解到内部存储, 供本地桥接服务读取
-        File webDir = extractWebAssets(this);
-
-        // 2. 启动内嵌 Python 桥接服务
-        if (!Python.isStarted()) {
-            Python.start(new AndroidPlatform(getApplicationContext()));
-        }
-        Python py = Python.getInstance();
-        py.getModule("apk_main").callAttr("start",
-                getFilesDir().getAbsolutePath(), webDir.getAbsolutePath());
-
-        // 3. WebView 加载本地控制台
         web = new WebView(this);
         WebSettings st = web.getSettings();
         st.setJavaScriptEnabled(true);
@@ -64,43 +57,98 @@ public class MainActivity extends Activity {
         st.setDatabaseEnabled(true);
         web.setBackgroundColor(0xFFECEFF3);
         web.addJavascriptInterface(new Bridge(), "AndroidBridge");
+        setContentView(web);
 
         if (savedInstanceState != null) {
             web.restoreState(savedInstanceState);
-            setContentView(web);
-        } else {
-            setContentView(web);
-            waitForServer(() -> web.loadUrl(CONSOLE_URL));
+            return;
         }
+        showSplash();
+        startInBackground();
+    }
+
+    /** 显示启动占位页(浅色背景 + 提示文字) */
+    private void showSplash() {
+        web.loadData("<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                + "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+                + "<style>body{display:flex;align-items:center;justify-content:center;"
+                + "height:100vh;margin:0;background:#eceff3;color:#37474f;"
+                + "font-family:sans-serif;font-size:18px;letter-spacing:2px}"
+                + "</style></head><body>正在启动控制台…</body></html>",
+                "text/html", "utf-8");
+    }
+
+    /** 后台完成: 资产解压 → Python 启动 → 本地服务就绪 → 加载界面 */
+    private void startInBackground() {
+        final Context app = getApplicationContext();
+        final Activity act = this;
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    // 1. 把打包在 assets/web 的界面文件解到内部存储
+                    File webDir = extractWebAssets(app);
+
+                    // 2. 启动内嵌 Python 桥接服务(127.0.0.1:8080)
+                    if (!Python.isStarted()) {
+                        Python.start(new AndroidPlatform(app));
+                    }
+                    Python.getInstance().getModule("apk_main").callAttr("start",
+                            app.getFilesDir().getAbsolutePath(),
+                            webDir.getAbsolutePath());
+
+                    // 3. 轮询服务就绪后加载界面
+                    waitForServer(() -> web.loadUrl(CONSOLE_URL));
+                } catch (Throwable t) {
+                    showError(act, t);
+                }
+            }
+        }, "app-startup").start();
+    }
+
+    /** 启动失败: 页面显示错误摘要(不闪退), 便于用户拍照反馈 */
+    private static void showError(final Activity act, Throwable t) {
+        StringWriter sw = new StringWriter();
+        t.printStackTrace(new PrintWriter(sw));
+        String trace = sw.toString().replace("&", "&amp;").replace("<", "&lt;")
+                .replace(">", "&gt;");
+        final String html = "<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                + "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+                + "<style>body{margin:0;background:#fff3f0;color:#b3261e;"
+                + "font-family:monospace;font-size:12px;padding:16px;"
+                + "word-break:break-all;white-space:pre-wrap}"
+                + "h2{font-family:sans-serif;font-size:18px}</style></head>"
+                + "<body><h2>启动失败，请截图反馈给管理员</h2>" + trace
+                + "</body></html>";
+        act.runOnUiThread(() -> act.webLoadData(html));
+    }
+
+    private void webLoadData(String html) {
+        if (web != null) web.loadData(html, "text/html", "utf-8");
     }
 
     /** 轮询本地服务就绪后回调(最多等 20 秒) */
     private void waitForServer(final Runnable ready) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                long deadline = System.currentTimeMillis() + 20000;
-                while (System.currentTimeMillis() < deadline) {
-                    HttpURLConnection conn = null;
-                    try {
-                        conn = (HttpURLConnection) new URL(CONSOLE_URL + "api/ping")
-                                .openConnection();
-                        conn.setConnectTimeout(800);
-                        conn.setReadTimeout(800);
-                        if (conn.getResponseCode() == 200) {
-                            runOnUiThread(ready);
-                            return;
-                        }
-                    } catch (IOException ignored) {
-                        // 服务未就绪, 继续等
-                    } finally {
-                        if (conn != null) conn.disconnect();
-                    }
-                    try { Thread.sleep(300); } catch (InterruptedException e) { return; }
+        long deadline = System.currentTimeMillis() + 20000;
+        while (System.currentTimeMillis() < deadline) {
+            HttpURLConnection conn = null;
+            try {
+                conn = (HttpURLConnection) new URL(CONSOLE_URL + "api/ping")
+                        .openConnection();
+                conn.setConnectTimeout(800);
+                conn.setReadTimeout(800);
+                if (conn.getResponseCode() == 200) {
+                    runOnUiThread(ready);
+                    return;
                 }
-                runOnUiThread(ready);   // 超时也加载, 让页面显示"服务断开"
+            } catch (IOException ignored) {
+                // 服务未就绪, 继续等
+            } finally {
+                if (conn != null) conn.disconnect();
             }
-        }).start();
+            try { Thread.sleep(300); } catch (InterruptedException e) { return; }
+        }
+        runOnUiThread(ready);   // 超时也加载, 让页面显示"服务断开"
     }
 
     /** 解压 assets/web/** 到 filesDir/web, 返回目标目录 */

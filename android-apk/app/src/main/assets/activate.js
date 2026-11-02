@@ -67,7 +67,6 @@ const Activation = (function () {
   const B32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
   const LS_KEY = 'ioconsole_activation';
   const LS_MC  = 'ioconsole_machine_id';
-  const LS_BASE = 'ioconsole_bridge_base';
 
   function utf8(str) {
     return Array.from(new TextEncoder().encode(str));
@@ -115,12 +114,10 @@ const Activation = (function () {
     return id;
   }
 
-  /* ------------------------------------------------ 控制台服务地址(APK模式) */
-  function base() {
-    if (!isApk()) return '';
-    return (localStorage.getItem(LS_BASE) || '').replace(/\/+$/, '');
-  }
-  function url(path) { return base() + path; }
+  /* ------------------------------------------------ 服务地址
+     桥接服务已内置于 APP(或部署在目标机), 页面永远同源访问, 无需配置 */
+  function base() { return ''; }
+  function url(path) { return path; }
 
   /* ------------------------------------------------ 状态存取 */
   function saved() {
@@ -138,7 +135,7 @@ const Activation = (function () {
   }
 
   /* ------------------------------------------------ 激活页 UI */
-  const APP_VER = 'v2.2.0';
+  const APP_VER = 'v2.3.0';
   let resolver = null;
 
   function buildGate() {
@@ -146,17 +143,13 @@ const Activation = (function () {
     gate.id = 'gate';
     const mc = machineCode();
     gate.innerHTML = `
+      <div class="orgbar">中烟信息业保中心</div>
       <div class="gate-card">
         <div class="gate-brand"><span class="gate-mark">◤</span> I/O 卡检测控制台</div>
         <h2>软件激活</h2>
         <p class="gate-tip">${isApk()
           ? '首次安装需输入校验码解锁。请把下方机器码发给管理员，获取校验码后填入。'
           : '首次使用需输入校验码解锁。请把下方机器码发给管理员，获取校验码后填入。'}</p>
-        <div class="gate-field" ${isApk() ? '' : 'hidden'}>
-          <label>控制台服务地址（目标机 IP:端口）</label>
-          <input id="gateBase" type="url" inputmode="url" autocapitalize="off" spellcheck="false"
-                 placeholder="http://192.168.1.100:8080" value="${base()}">
-        </div>
         <div class="gate-mc">
           <div class="gate-mc-label">本机机器码</div>
           <div class="gate-mc-row">
@@ -187,13 +180,6 @@ const Activation = (function () {
     });
 
     const tryActivate = () => {
-      const baseIn = ($('#gateBase') && $('#gateBase').value.trim()) || '';
-      if (isApk() && !/^https?:\/\/.+/i.test(baseIn)) {
-        const err = $('#gateErr');
-        err.hidden = false; err.textContent = '请先填写控制台服务地址（http://IP:端口）';
-        return;
-      }
-      if (isApk()) localStorage.setItem(LS_BASE, baseIn.replace(/\/+$/, ''));
       if (activate(mc, $('#gateCode').value)) {
         gate.remove();
         if (resolver) resolver();
@@ -206,7 +192,7 @@ const Activation = (function () {
     };
     $('#gateGo').addEventListener('click', tryActivate);
     $('#gateCode').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryActivate(); });
-    setTimeout(() => { const el = $('#gateCode') || $('#gateBase'); el && el.focus(); }, 60);
+    setTimeout(() => { const el = $('#gateCode'); el && el.focus(); }, 60);
   }
 
   function fallbackCopy(text, done) {

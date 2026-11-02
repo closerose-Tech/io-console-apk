@@ -1,5 +1,6 @@
 plugins {
     id 'com.android.application'
+    id 'com.chaquo.python'
 }
 
 android {
@@ -10,8 +11,8 @@ android {
         applicationId 'com.aic.ioconsole'
         minSdk 24
         targetSdk 34
-        versionCode 1
-        versionName '2.2.0'
+        versionCode 2
+        versionName '2.3.0'
     }
 
     buildTypes {
@@ -26,8 +27,11 @@ android {
     }
 }
 
-dependencies {
-    // WebViewAssetLoader: 以 https 域名加载本地资产页,
-    // 使页面内 fetch / EventSource 等相对路径请求拥有正常 origin
-    implementation 'androidx.webkit:webkit:1.8.0'
+chaquopy {
+    defaultConfig {
+        // 桥接服务跑在手机本地: SSH(paramiko) 直连目标主机, 无需中间服务器
+        pip {
+            install 'paramiko'
+        }
+    }
 }

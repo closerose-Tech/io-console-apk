@@ -141,7 +141,7 @@ function renderHeader(st) {
   const parts = [];
   parts.push(st.mode === 'local' ? '本机直连' : (st.config.host || '未设置主机'));
   parts.push('v' + st.version);
-  parts.push('设计开发人：陈宠');
+  parts.push('开发者：陈宠');
   $('#subtitle').textContent = parts.join(' · ');
 
   const wrap = $('#progWrap');
@@ -209,6 +209,37 @@ function initCmd() {
     inp.value = S.cmdHist[0];
     inp.focus();
     toast('再按 ↑ 键可翻更早的命令');
+  });
+
+  // 清空命令窗口
+  $('#cmdClear').addEventListener('click', () => {
+    $('#cmdOut').innerHTML = '<div class="cmd-hint">已清空。继续输入命令即可。</div>';
+    buzz(10);
+    toast('命令窗口已清空');
+  });
+
+  // 复制命令窗口全部内容
+  $('#cmdCopy').addEventListener('click', async () => {
+    const text = $('#cmdOut').innerText.trim();
+    if (!text) { toast('命令窗口还没有内容'); return; }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // 兜底: 临时 textarea + execCommand(旧 WebView 可能没有 async clipboard)
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;opacity:0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+      }
+      buzz(10);
+      toast('已复制到剪贴板', 'ok');
+    } catch (e) {
+      toast('复制失败: ' + (e && e.message || e), 'err');
+    }
   });
 }
 
@@ -831,7 +862,7 @@ function bind() {
 
   // ---- 测试页
   $('#btnRefresh').addEventListener('click', async () => {
-    try { await api('/api/devices', {}, 'GET'); toast('正在枚举设备…'); }
+    try { await api('/api/devices'); toast('正在枚举设备…'); }
     catch (e) { fail(e); }
   });
 

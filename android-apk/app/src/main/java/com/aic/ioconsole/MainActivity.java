@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.AssetManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.view.KeyEvent;
@@ -14,6 +15,8 @@ import android.widget.Toast;
 
 import com.chaquo.python.Python;
 import com.chaquo.python.android.AndroidPlatform;
+
+import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -32,18 +35,17 @@ import java.net.URL;
  * WebView 加载 http://127.0.0.1:8080/。用户只需填写目标主机 SSH 信息即可
  * 直接连接检测, 无需任何中间服务器。
  *
- * JS 桥 AndroidBridge 提供:
- *   machineCode(): 设备机器码(ANDROID_ID), 供激活页计算校验码
- *   toast(msg):    原生提示
- *
- * v2.3.1: 启动流程全部放入后台线程; 任何启动异常都在页面显示完整错误,
- *         不再直接闪退(便于现场反馈问题)。
+ * v2.3.2: 启动过程分阶段实时显示(含每步耗时); 首次运行 Python 解压/模块
+ *         导入较慢(10~60 秒), 进度页让用户看到进展; 60 秒看门狗超时后
+ *         显示诊断信息(Android 版本/架构/卡住的阶段), 不再无限灰屏。
  */
 public class MainActivity extends Activity {
 
     private static final String CONSOLE_URL = "http://127.0.0.1:8080/";
 
     private WebView web;
+    private long t0;                 // 启动计时
+    private final StringBuilder stages = new StringBuilder();   // 已完成阶段记录(供错误页显示)
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -64,72 +66,111 @@ public class MainActivity extends Activity {
             return;
         }
         showSplash();
+        t0 = System.currentTimeMillis();
         startInBackground();
     }
 
-    /** 显示启动占位页(浅色背景 + 提示文字) */
+    /* ------------------------------------------------------------ 启动进度页 */
+
+    private static final String SPLASH_HTML =
+        "<!DOCTYPE html><html><head><meta charset='utf-8'>"
+        + "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+        + "<style>body{margin:0;background:#eceff3;color:#37474f;"
+        + "font-family:sans-serif;display:flex;flex-direction:column;"
+        + "align-items:center;justify-content:center;height:100vh}"
+        + "h1{font-size:20px;letter-spacing:2px;margin:0 0 6px}"
+        + ".sub{font-size:13px;color:#78909c;margin-bottom:26px}"
+        + "#log{width:82%;max-width:360px;font-size:14px;line-height:2.1;"
+        + "font-family:sans-serif}"
+        + "#log div{border-bottom:1px solid #cfd8dc;padding:0 4px;"
+        + "word-break:break-all}"
+        + ".spin{color:#00695c}</style></head>"
+        + "<body><h1>研华I/O卡检测控制台</h1>"
+        + "<div class='sub' id='elapsed'>正在启动…</div>"
+        + "<div id='log'></div>"
+        + "<script>function addStage(s){var d=document.createElement('div');"
+        + "d.textContent=s;document.getElementById('log').appendChild(d);}"
+        + "function setElapsed(s){document.getElementById('elapsed').textContent=s;}"
+        + "</script></body></html>";
+
     private void showSplash() {
-        web.loadData("<!DOCTYPE html><html><head><meta charset='utf-8'>"
-                + "<meta name='viewport' content='width=device-width,initial-scale=1'>"
-                + "<style>body{display:flex;align-items:center;justify-content:center;"
-                + "height:100vh;margin:0;background:#eceff3;color:#37474f;"
-                + "font-family:sans-serif;font-size:18px;letter-spacing:2px}"
-                + "</style></head><body>正在启动控制台…</body></html>",
-                "text/html", "utf-8");
+        // loadDataWithBaseURL 才能正确渲染中文
+        web.loadDataWithBaseURL(null, SPLASH_HTML, "text/html", "utf-8", null);
     }
 
-    /** 后台完成: 资产解压 → Python 启动 → 本地服务就绪 → 加载界面 */
+    /** 启动线程 → 主线程: 在进度页追加一行 */
+    private void stage(final String line) {
+        stages.append(line).append('\n');
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (web != null) web.evaluateJavascript(
+                        "addStage(" + JSONObject.quote(line) + ")", null);
+            }
+        });
+    }
+
+    private void elapsed(final String text) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (web != null) web.evaluateJavascript(
+                        "setElapsed(" + JSONObject.quote(text) + ")", null);
+            }
+        });
+    }
+
+    private String secs() {
+        return String.format("%.1f 秒", (System.currentTimeMillis() - t0) / 1000.0);
+    }
+
+    /* ------------------------------------------------------------ 启动流程 */
+
+    /** 后台完成: 资产解压 → Python 初始化 → 服务就绪 → 加载界面 */
     private void startInBackground() {
         final Context app = getApplicationContext();
-        final MainActivity act = this;
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    // 1. 把打包在 assets/web 的界面文件解到内部存储
+                    // 1. 界面资产
+                    stage("▸ 准备界面资产…");
                     File webDir = extractWebAssets(app);
+                    stage("✓ 界面资产就绪 (" + secs() + ")");
 
-                    // 2. 启动内嵌 Python 桥接服务(127.0.0.1:8080)
+                    // 2. Python 引擎初始化(首次运行要解压标准库, 较慢)
+                    stage("▸ 初始化 Python 引擎(首次运行约 10~60 秒)…");
                     if (!Python.isStarted()) {
                         Python.start(new AndroidPlatform(app));
                     }
-                    Python.getInstance().getModule("apk_main").callAttr("start",
+                    stage("✓ Python 引擎就绪 (" + secs() + ")");
+
+                    // 3. 导入桥接模块(含 paramiko/加密库, 首次较慢)
+                    stage("▸ 加载桥接模块…");
+                    Python py = Python.getInstance();
+                    py.getModule("apk_main");       // 触发 import bridge/paramiko
+                    stage("✓ 桥接模块加载完成 (" + secs() + ")");
+
+                    // 4. 启动本地服务
+                    stage("▸ 启动本地控制台服务…");
+                    py.getModule("apk_main").callAttr("start",
                             app.getFilesDir().getAbsolutePath(),
                             webDir.getAbsolutePath());
+                    stage("✓ 服务已启动 (" + secs() + ")");
 
-                    // 3. 轮询服务就绪后加载界面
-                    waitForServer(() -> web.loadUrl(CONSOLE_URL));
+                    // 5. 等待服务就绪后加载界面(带看门狗)
+                    waitForServer();
                 } catch (Throwable t) {
-                    showError(act, t);
+                    showError(t);
                 }
             }
         }, "app-startup").start();
     }
 
-    /** 启动失败: 页面显示错误摘要(不闪退), 便于用户拍照反馈 */
-    private static void showError(final MainActivity act, Throwable t) {
-        StringWriter sw = new StringWriter();
-        t.printStackTrace(new PrintWriter(sw));
-        String trace = sw.toString().replace("&", "&amp;").replace("<", "&lt;")
-                .replace(">", "&gt;");
-        final String html = "<!DOCTYPE html><html><head><meta charset='utf-8'>"
-                + "<meta name='viewport' content='width=device-width,initial-scale=1'>"
-                + "<style>body{margin:0;background:#fff3f0;color:#b3261e;"
-                + "font-family:monospace;font-size:12px;padding:16px;"
-                + "word-break:break-all;white-space:pre-wrap}"
-                + "h2{font-family:sans-serif;font-size:18px}</style></head>"
-                + "<body><h2>启动失败，请截图反馈给管理员</h2>" + trace
-                + "</body></html>";
-        act.runOnUiThread(() -> act.webLoadData(html));
-    }
-
-    public void webLoadData(String html) {
-        if (web != null) web.loadData(html, "text/html", "utf-8");
-    }
-
-    /** 轮询本地服务就绪后回调(最多等 20 秒) */
-    private void waitForServer(final Runnable ready) {
-        long deadline = System.currentTimeMillis() + 20000;
+    /** 轮询本地服务就绪; 60 秒未就绪则显示诊断页 */
+    private void waitForServer() {
+        long deadline = System.currentTimeMillis() + 60000;
+        long lastReport = 0;
         while (System.currentTimeMillis() < deadline) {
             HttpURLConnection conn = null;
             try {
@@ -138,7 +179,13 @@ public class MainActivity extends Activity {
                 conn.setConnectTimeout(800);
                 conn.setReadTimeout(800);
                 if (conn.getResponseCode() == 200) {
-                    runOnUiThread(ready);
+                    elapsed("启动完成 " + secs());
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (web != null) web.loadUrl(CONSOLE_URL);
+                        }
+                    });
                     return;
                 }
             } catch (IOException ignored) {
@@ -146,10 +193,55 @@ public class MainActivity extends Activity {
             } finally {
                 if (conn != null) conn.disconnect();
             }
+            long now = System.currentTimeMillis();
+            if (now - lastReport > 2000) {
+                lastReport = now;
+                final long s = (now - t0) / 1000;
+                elapsed("正在等待本地服务就绪… " + s + " 秒");
+            }
             try { Thread.sleep(300); } catch (InterruptedException e) { return; }
         }
-        runOnUiThread(ready);   // 超时也加载, 让页面显示"服务断开"
+        // 看门狗超时
+        stage("✗ 本地服务 60 秒未就绪");
+        showError(new RuntimeException("本地服务启动超时(60秒)"));
     }
+
+    /* ------------------------------------------------------------ 错误展示 */
+
+    /** 启动失败/超时: 页面显示阶段记录 + 错误堆栈 + 设备信息(不闪退) */
+    private void showError(Throwable t) {
+        StringWriter sw = new StringWriter();
+        t.printStackTrace(new PrintWriter(sw));
+        String trace = esc(sw.toString());
+        String dev = esc("Android " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT
+                + "), " + Build.SUPPORTED_ABIS[0] + ", 型号 " + Build.MANUFACTURER + " " + Build.MODEL);
+        String stageTxt = esc(stages.toString());
+        final String html = "<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                + "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+                + "<style>body{margin:0;background:#fff3f0;color:#b3261e;"
+                + "font-family:monospace;font-size:12px;padding:14px;"
+                + "word-break:break-all;white-space:pre-wrap}"
+                + "h2{font-family:sans-serif;font-size:18px;margin:4px 0 10px}"
+                + ".dev{color:#8d6e63;margin:8px 0}</style></head>"
+                + "<body><h2>启动失败，请截图反馈给管理员</h2>"
+                + "<div class='dev'>设备: " + dev + "</div>"
+                + "<div>启动过程:\n" + stageTxt + "</div>"
+                + "<div>错误:\n" + trace + "</div></body></html>";
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (web != null) {
+                    web.loadDataWithBaseURL(null, html, "text/html", "utf-8", null);
+                }
+            }
+        });
+    }
+
+    private static String esc(String s) {
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    }
+
+    /* ------------------------------------------------------------ 资产解压 */
 
     /** 解压 assets/web/** 到 filesDir/web, 返回目标目录 */
     private static File extractWebAssets(Context ctx) {
@@ -198,6 +290,8 @@ public class MainActivity extends Activity {
             if (out != null) try { out.close(); } catch (IOException ignored) { }
         }
     }
+
+    /* ------------------------------------------------------------ 其他 */
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
